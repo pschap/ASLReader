@@ -8,20 +8,34 @@ N = 26;
 sigma = 1.0;
 backgroundIm = imread('BackgroundImages/IMG_0049.JPG');
 smoothedBackground = GaussianSmoothing(backgroundIm, sigma);
-T = 0.5;
+T = 0.4;
+
+covMatrices = zeros(5, 5, N);
 
 for i = 1:N
     currentDirectory = strcat('LetterImages/', letters(i));
     imageFiles = dir(fullfile(currentDirectory, '*.jpg'));
     sz = length(imageFiles);
     
+    sumMatrix = zeros(5, 5);
+    
     for j = 1:sz
         filename = imageFiles(j).name;
         letterIm = imread(strcat(currentDirectory, '/', filename));
         blurredIm = GaussianSmoothing(letterIm, sigma);
         
+        % Perform background subtraction
         region = BackgroundSubtraction(blurredIm, smoothedBackground, T);
+        region = bwmorph(region, 'dilate');
+        [L, num] = bwlabel(region, 8);
+        region = bwareaopen(L, 150, 8);
+        
+        % features = GetWindowFeatures(...)
+        % Using features, calculate covariance matrix C model, add result
+        % to sumMatrix   
     end
+    
+    covMatrices(:, :, i) = sumMatrix / sz;
 end
 %% Matching
 
