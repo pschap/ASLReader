@@ -67,6 +67,7 @@ for i = 1:N
     
     covMatrices(:, :, i) = sumMatrix / sz;
 end
+%}
 
 
 
