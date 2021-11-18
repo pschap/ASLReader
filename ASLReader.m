@@ -73,6 +73,94 @@ end
 
 %% Matching
 
+letters = char(65:90);
+N = 26;
+sigma = 1.0;
+T = 0.5;
+
+backgroundIm = imread('ASLPics(Ian)/Background/IMG-0405.JPG');
+smoothedBackground = GaussianSmoothing(backgroundIm, sigma);
+
+for i = 1:N
+    currentDirectory = strcat('ASLPics(Ian)/Letters/', letters(i))
+    imageFiles = dir(fullfile(currentDirectory, '*.HEIC'))
+    sz = length(imageFiles);
+    
+    for j = 1:sz
+        filename = imageFiles(j).name;
+        letterIm = imread(strcat(currentDirectory, '/', filename));
+        blurredIm = GaussianSmoothing(letterIm, sigma);
+
+        % Perform background subtraction
+        region = BackgroundSubtraction(blurredIm, smoothedBackground, T);
+        region = bwmorph(region, 'dilate');
+        [L, num] = bwlabel(region, 8);
+        region = bwareaopen(L, 150, 8);
+        
+        
+        
+        %CALCULATION
+        %Using features, calculate covariance matrix C model, add result
+        %Overlay region to image, convert to grayscale
+        handIm = rgb2gray(blurredIm.*region);
+        
+        %get feature vectors of image
+        features = GetWindowFeatureVectors(handIm);
+        
+        %only pulls coordinate info from region
+        %(not sure if this will help?)
+        features(:,:,1) = features(:,:,1).*region;
+        features(:,:,2) = features(:,:,2).*region;
+        
+        %Mean feature vector
+        ufkx = mean(features, 1);
+        ufk = mean(ufkx,2);
+        
+        [R,C] = size(features(:,:,3));
+        sum = 0;
+        for y = 1:R
+             for x = 1:C
+                 sub = features(y,x,:)-ufk;
+                 sub = sub(:);
+                 sum = sum + (sub)*(sub.');
+             end
+        end
+        %bias sum, divide by #pixels
+        covar = sum/(R*C)
+
+         
+        
+        
+        %CLOSEST MATCH
+        distances = []; 
+        for l = 1:N
+            %for each letter covariance
+            %get eigenvalues
+            vals = eig(covar,covMatrix(:,:,l));
+            %get rid of zeros so don't ln(0)
+            vals(vals==0)=NaN;
+            length = size(vals);
+            sum = 0;
+            %ln() each eigval, square, then sum
+            for p = 1:length(1)
+                sum = sum + log(vals(p))^2;
+            end
+            sum = sqrt(sum);
+            %save sqrt'd total
+            distances(l) = sum;
+        end
+        
+        %find minimum distance
+        closest = min(distances);
+        %index of that minimum distance is index of patch
+        result = find(distances==closest);
+        printf('Actual: %s, Classified: %s', letters(i), letters(result));
+    end
+    
+end
+
+
+
 
 %% Reference
 % FOLLOWING CODE IS PULLED FROM MY HW6 COVARIACE MATCHING
