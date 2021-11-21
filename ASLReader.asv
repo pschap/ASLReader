@@ -28,22 +28,29 @@ for i = 1:N
         region = BackgroundSubtraction(blurredIm, smoothedBackground, T);
         region = bwmorph(region, 'dilate');
         [L, num] = bwlabel(region, 8);
-        region = bwareaopen(L, 150, 8);
+        region = bwareaopen(L, 500, 8);
+        
+        [rows, columns] = find(region);
+        windowLeft = min(columns);
+        windowRight = max(columns);
+        windowBottom = max(rows);
+        windowTop = min(rows);
+        
+        sz = size(blurredIm);
+        
+        left = 
+        
+        handRegion = blurredIm(windowTop:windowBottom, windowLeft:windowRight, :);
         
         
         
         %CALCULATION
         %Using features, calculate covariance matrix C model, add result
         %Overlay region to image, convert to grayscale
-        handIm = rgb2gray(blurredIm.*region);
+        handIm = rgb2gray(handRegion);
         
         %get feature vectors of image
         features = GetWindowFeatureVectors(handIm);
-        
-        %only pulls coordinate info from region
-        %(not sure if this will help?)
-        features(:,:,1) = features(:,:,1).*region;
-        features(:,:,2) = features(:,:,2).*region;
         
         %Mean feature vector
         ufkx = mean(features, 1);
@@ -59,7 +66,7 @@ for i = 1:N
              end
          end
          %bias sum, divide by #pixels
-         sum = sum/(R*C)
+         sum = sum/(R*C);
 
          % to sumMatrix  
          sumMatrix = sumMatrix + sum;
@@ -83,7 +90,7 @@ smoothedBackground = GaussianSmoothing(backgroundIm, sigma);
 
 for i = 1:N
     currentDirectory = strcat('ASLPics(Ian)/Letters/', letters(i));
-    imageFiles = dir(fullfile(currentDirectory, '*.jpg'));
+    imageFiles = dir(fullfile(currentDirectory, '*.HEIC'));
     sz = length(imageFiles);
     
     for j = 1:sz
@@ -153,8 +160,8 @@ for i = 1:N
         %find minimum distance
         closest = min(distances);
         %index of that minimum distance is index of patch
-        result = find(distances==closest)
-       
+        result = find(distances==closest);
+        printf('Actual: %s, Classified: %s', letters(i), letters(result));
     end
     
 end

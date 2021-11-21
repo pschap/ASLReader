@@ -12,60 +12,78 @@ T = .5;
 
 covMatrices = zeros(3, 3, N);
 
-for i = 1:N
-    currentDirectory = strcat('LetterImages/', letters(i));
-    imageFiles = dir(fullfile(currentDirectory, '*.jpg'));
-    sz = length(imageFiles);
+if ~isfile('covMatrices.txt')
     
-    sumMatrix = zeros(3, 3);
-    
-    for j = 1:sz
-        filename = imageFiles(j).name;
-        letterIm = imread(strcat(currentDirectory, '/', filename));
-        blurredIm = GaussianSmoothing(letterIm, sigma);
+    for i = 1:N
+        currentDirectory = strcat('LetterImages/', letters(i));
+        imageFiles = dir(fullfile(currentDirectory, '*.jpg'));
+        sz = length(imageFiles);
 
-        % Perform background subtraction
-        region = BackgroundSubtraction(blurredIm, smoothedBackground, T);
-        region = bwmorph(region, 'dilate');
-        [L, num] = bwlabel(region, 8);
-        region = bwareaopen(L, 150, 8);
-        
-        
-        
-        %CALCULATION
-        %Using features, calculate covariance matrix C model, add result
-        %Overlay region to image, convert to grayscale
-        handIm = rgb2gray(blurredIm.*region);
-        
-        %get feature vectors of image
-        features = GetWindowFeatureVectors(handIm);
-        
-        %only pulls coordinate info from region
-        %(not sure if this will help?)
-        features(:,:,1) = features(:,:,1).*region;
-        features(:,:,2) = features(:,:,2).*region;
-        
-        %Mean feature vector
-        ufkx = mean(features, 1);
-        ufk = mean(ufkx,2);
-        
-        [R,C] = size(features(:,:,3));
-        sum = 0;
-        for y = 1:R
-             for x = 1:C
-                 sub = features(y,x,:)-ufk;
-                 sub = sub(:);
-                 sum = sum + (sub)*(sub.');
+        sumMatrix = zeros(3, 3);
+
+        for j = 1:sz
+            filename = imageFiles(j).name;
+            letterIm = imread(strcat(currentDirectory, '/', filename));
+            blurredIm = GaussianSmoothing(letterIm, sigma);
+
+            % Perform background subtraction
+            region = BackgroundSubtraction(blurredIm, smoothedBackground, T);
+            region = bwmorph(region, 'dilate');
+            [L, num] = bwlabel(region, 8);
+            region = bwareaopen(L, 500, 8);
+
+            % Extract window using background subtracted image
+            [rows, columns] = find(region);
+            windowLeft = min(columns);
+            windowRight = max(columns);
+            windowBottom = max(rows);
+            windowTop = min(rows);
+
+            rowThreshold = 25;
+            columnThreshold = 25;
+            imageSz = size(blurredIm);
+
+            left = max(1, windowLeft-columnThreshold);
+            right = min(imageSz(2), windowRight+columnThreshold);
+            top = max(1, windowTop-rowThreshold);
+            bottom = min(imageSz(1), windowBottom+rowThreshold);
+
+            handRegion = blurredIm(top:bottom, left:right, :);
+
+            %CALCULATION
+            %Using features, calculate covariance matrix C model, add result
+            %Overlay region to image, convert to grayscale
+            handIm = rgb2gray(handRegion);
+
+            %get feature vectors of image
+            features = GetWindowFeatureVectors(handIm);
+
+            %Mean feature vector
+            ufkx = mean(features, 1);
+            ufk = mean(ufkx,2);
+
+            [R,C] = size(features(:,:,3));
+            sum = 0;
+            for y = 1:R
+                 for x = 1:C
+                     sub = features(y,x,:)-ufk;
+                     sub = sub(:);
+                     sum = sum + (sub)*(sub.');
+                 end
              end
-         end
-         %bias sum, divide by #pixels
-         sum = sum/(R*C)
+             %bias sum, divide by #pixels
+             sum = sum/(R*C);
 
-         % to sumMatrix  
-         sumMatrix = sumMatrix + sum;
+             % to sumMatrix  
+             sumMatrix = sumMatrix + sum;
+        end
+
+        covMatrices(:, :, i) = sumMatrix / sz;
     end
     
-    covMatrices(:, :, i) = sumMatrix / sz;
+    writematrix(covMatrices, 'covMatrices.txt');
+else
+    covMatrices = readmatrix('covMatrices.txt');
 end
 
 
@@ -81,9 +99,11 @@ T = 0.5;
 backgroundIm = imread('ASLPics(Ian)/Background/IMG-0405.JPG');
 smoothedBackground = GaussianSmoothing(backgroundIm, sigma);
 
+total = 0;
+correct = 0;
 for i = 1:N
-    currentDirectory = strcat('ASLPics(Ian)/Letters/', letters(i))
-    imageFiles = dir(fullfile(currentDirectory, '*.HEIC'))
+    currentDirectory = strcat('ASLPics(Ian)/Letters/', letters(i));
+    imageFiles = dir(fullfile(currentDirectory, '*.HEIC'));
     sz = length(imageFiles);
     
     for j = 1:sz
@@ -97,20 +117,31 @@ for i = 1:N
         [L, num] = bwlabel(region, 8);
         region = bwareaopen(L, 150, 8);
         
+        % Extract window using background subtracted image
+        [rows, columns] = find(region);
+        windowLeft = min(columns);
+        windowRight = max(columns);
+        windowBottom = max(rows);
+        windowTop = min(rows);
         
+        rowThreshold = 25;
+        columnThreshold = 25;
+        sz = size(blurredIm);
+        
+        left = max(1, windowLeft-columnThreshold);
+        right = min(sz(2), windowRight+columnThreshold);
+        top = max(1, windowTop-rowThreshold);
+        bottom = min(sz(1), windowBottom+rowThreshold);
+        
+        handRegion = blurredIm(top:bottom, left:right, :);
         
         %CALCULATION
         %Using features, calculate covariance matrix C model, add result
         %Overlay region to image, convert to grayscale
-        handIm = rgb2gray(blurredIm.*region);
+        handIm = rgb2gray(handRegion);
         
         %get feature vectors of image
         features = GetWindowFeatureVectors(handIm);
-        
-        %only pulls coordinate info from region
-        %(not sure if this will help?)
-        features(:,:,1) = features(:,:,1).*region;
-        features(:,:,2) = features(:,:,2).*region;
         
         %Mean feature vector
         ufkx = mean(features, 1);
@@ -126,11 +157,8 @@ for i = 1:N
              end
         end
         %bias sum, divide by #pixels
-        covar = sum/(R*C)
+        covar = sum/(R*C);
 
-         
-        
-        
         %CLOSEST MATCH
         distances = []; 
         for l = 1:N
@@ -155,9 +183,17 @@ for i = 1:N
         %index of that minimum distance is index of patch
         result = find(distances==closest);
         printf('Actual: %s, Classified: %s', letters(i), letters(result));
+        
+        if letters(i) == letters(result)
+            correct = correct + 1;
+        end
+        
+        total = total + 1;
     end
     
 end
+
+printf('Classification accuracy: %f', correct / total);
 
 
 
