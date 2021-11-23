@@ -91,31 +91,36 @@ end
 
 %% Matching
 
+covMatrices = readmatrix('covMatrices.txt');
+covMatrices(isnan(covMatrices))=0;
 letters = char(65:90);
 N = 26;
 sigma = 1.0;
-T = 0.5;
+T = 0.4;
 
-backgroundIm = imread('ASLPics(Ian)/Background/IMG-0405.JPG');
+backgroundIm = fliplr(pagetranspose(imread('ASLPicsIan/Background/IMG-0405.JPG')));
 smoothedBackground = GaussianSmoothing(backgroundIm, sigma);
 
 total = 0;
 correct = 0;
 for i = 1:N
-    currentDirectory = strcat('ASLPics(Ian)/Letters/', letters(i));
-    imageFiles = dir(fullfile(currentDirectory, '*.HEIC'));
-    sz = length(imageFiles);
+    currentDirectory = strcat('ASLPicsIan/Letters/', letters(i));
+    imageFiles = dir(fullfile(currentDirectory, '*.jpg'));
+    sz = length(imageFiles)
     
     for j = 1:sz
         filename = imageFiles(j).name;
-        letterIm = imread(strcat(currentDirectory, '/', filename));
+        concat = strcat(currentDirectory, '/', filename);
+        letterIm = imread(concat,'jpg');
         blurredIm = GaussianSmoothing(letterIm, sigma);
-
+        
         % Perform background subtraction
         region = BackgroundSubtraction(blurredIm, smoothedBackground, T);
         region = bwmorph(region, 'dilate');
         [L, num] = bwlabel(region, 8);
         region = bwareaopen(L, 150, 8);
+        figure();
+        imshow(region)
         
         % Extract window using background subtracted image
         [rows, columns] = find(region);
@@ -164,26 +169,27 @@ for i = 1:N
         for l = 1:N
             %for each letter covariance
             %get eigenvalues
-            vals = eig(covar,covMatrix(:,:,l));
+            low = l*3-2;
+            high = l*3;
+            covMatrix = covMatrices(:,low:high);
+            vals = eig(covar,covMatrix);
             %get rid of zeros so don't ln(0)
             vals(vals==0)=NaN;
-            length = size(vals);
+            len = size(vals);
             sum = 0;
             %ln() each eigval, square, then sum
-            for p = 1:length(1)
+            for p = 1:len(1)
                 sum = sum + log(vals(p))^2;
             end
             sum = sqrt(sum);
             %save sqrt'd total
             distances(l) = sum;
         end
-        
         %find minimum distance
         closest = min(distances);
         %index of that minimum distance is index of patch
         result = find(distances==closest);
-        printf('Actual: %s, Classified: %s', letters(i), letters(result));
-        
+        fprintf('Actual: %c, Classified: %c\n', letters(i), letters(result));
         if letters(i) == letters(result)
             correct = correct + 1;
         end
@@ -193,7 +199,7 @@ for i = 1:N
     
 end
 
-printf('Classification accuracy: %f', correct / total);
+printf('Classification accuracy: %f', correct/total);
 
 
 
