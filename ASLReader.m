@@ -6,7 +6,7 @@ clc
 letters = char(65:90);
 N = 26;
 sigma = 1.0;
-backgroundIm = imread('BackgroundImages/IMG_0049.JPG');
+backgroundIm = imread('BackgroundImages(New)/IMG_0257.JPG');
 smoothedBackground = GaussianSmoothing(backgroundIm, sigma);
 T = .5;
 
@@ -15,7 +15,7 @@ covMatrices = zeros(3, 3, N);
 if ~isfile('covMatrices.txt')
     
     for i = 1:N
-        currentDirectory = strcat('LetterImages/', letters(i));
+        currentDirectory = strcat('LetterImages(New)/', letters(i));
         imageFiles = dir(fullfile(currentDirectory, '*.jpg'));
         sz = length(imageFiles);
 
@@ -98,13 +98,13 @@ N = 26;
 sigma = 1.0;
 T = 0.4;
 
-backgroundIm = fliplr(pagetranspose(imread('ASLPicsIan/Background/IMG-0405.JPG')));
+backgroundIm = imread('BackgroundImages(New)/IMG_0257.JPG');
 smoothedBackground = GaussianSmoothing(backgroundIm, sigma);
 
 total = 0;
 correct = 0;
 for i = 1:N
-    currentDirectory = strcat('ASLPicsIan/Letters/', letters(i));
+    currentDirectory = strcat('TestImages/', letters(i));
     imageFiles = dir(fullfile(currentDirectory, '*.jpg'));
     sz = length(imageFiles)
     
