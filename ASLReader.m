@@ -8,7 +8,7 @@ N = 26;
 sigma = 1.0;
 backgroundIm = imread('BackgroundImages(New)/IMG_0257.JPG');
 smoothedBackground = GaussianSmoothing(backgroundIm, sigma);
-T = .5;
+T = .2;
 
 covMatrices = zeros(3, 3, N);
 
@@ -53,11 +53,15 @@ if ~isfile('covMatrices.txt')
             %CALCULATION
             %Using features, calculate covariance matrix C model, add result
             %Overlay region to image, convert to grayscale
-            handIm = rgb2gray(handRegion);
+            %handIm = rgb2gray(handRegion);
 
+            handIm = rgb2gray(blurredIm.*region);
+            figure();
+            imshow(handIm);
+            
             %get feature vectors of image
             features = GetWindowFeatureVectors(handIm);
-
+            
             %Mean feature vector
             ufkx = mean(features, 1);
             ufk = mean(ufkx,2);
@@ -96,7 +100,7 @@ covMatrices(isnan(covMatrices))=0;
 letters = char(65:90);
 N = 26;
 sigma = 1.0;
-T = 0.4;
+T = 0.2;
 
 backgroundIm = imread('BackgroundImages(New)/IMG_0257.JPG');
 smoothedBackground = GaussianSmoothing(backgroundIm, sigma);
@@ -106,7 +110,7 @@ correct = 0;
 for i = 1:N
     currentDirectory = strcat('TestImages/', letters(i));
     imageFiles = dir(fullfile(currentDirectory, '*.jpg'));
-    sz = length(imageFiles)
+    sz = length(imageFiles);
     
     for j = 1:sz
         filename = imageFiles(j).name;
@@ -119,8 +123,6 @@ for i = 1:N
         region = bwmorph(region, 'dilate');
         [L, num] = bwlabel(region, 8);
         region = bwareaopen(L, 150, 8);
-        figure();
-        imshow(region)
         
         % Extract window using background subtracted image
         [rows, columns] = find(region);
@@ -143,7 +145,14 @@ for i = 1:N
         %CALCULATION
         %Using features, calculate covariance matrix C model, add result
         %Overlay region to image, convert to grayscale
-        handIm = rgb2gray(handRegion);
+        
+        %uses side cropping to region
+        %handIm = rgb2gray(handRegion);
+        
+        %only looks at pixels flagged by region
+        handIm = rgb2gray(blurredIm.*region);
+        figure();
+        imshow(handIm);
         
         %get feature vectors of image
         features = GetWindowFeatureVectors(handIm);
@@ -199,7 +208,7 @@ for i = 1:N
     
 end
 
-printf('Classification accuracy: %f', correct/total);
+fprintf('Classification accuracy: %u/%u\n', correct, total);
 
 
 
