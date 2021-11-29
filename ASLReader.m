@@ -130,8 +130,6 @@ for i = 1:N
         concat = strcat(currentDirectory, '/', filename);
         letterIm = imread(concat,'jpg');
         blurredIm = GaussianSmoothing(letterIm, sigma);
-        %figure();
-        %imshow(blurredIm);
         
         % Perform background subtraction
         region = BackgroundSubtraction(blurredIm, smoothedBackground, T);
@@ -240,32 +238,6 @@ function region = BackgroundSubtraction(foregroundIm, backgroundIm, T)
 
     region = abs(grayForeground - grayBackground) > T;
 
-end
-
-% Given a binary region, calculates the average X and Y coordinates
-% in the region.
-function [X, Y] = CalculateRegionCenter(region)
-
-    X = 0;
-    Y = 0;
-    count = 0;
-    
-    sz = size(region);
-    for x = 1:sz(2)
-        for y = 1:sz(1)
-            
-            if region(y,x) == 1
-                X = X + x;
-                Y = Y + y;
-                count = count + 1;
-            end
-            
-        end
-    end
-    
-    X = X / XCount;
-    Y = Y / YCount;
-    
 end
 
 % PULLED FROM HW2 CODE

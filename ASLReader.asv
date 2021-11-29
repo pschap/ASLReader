@@ -88,13 +88,13 @@ if ~isfile('covMatrices.txt')
              %bias sum, divide by #pixels
              sum = sum/(R*C);
 
-             % to sumMatrix  
+             % add to sumMatrix  
              sumMatrix = sumMatrix + sum;
         end
-
+        %average sumMatrix by #images
         covMatrices(:, :, i) = sumMatrix / sz;
     end
-    
+    %Save to file
     writematrix(covMatrices, 'covMatrices.txt');
 else
     covMatrices = readmatrix('covMatrices.txt');
@@ -104,7 +104,7 @@ end
 
 
 %% Matching
-
+%Initialization
 covMatrices = readmatrix('covMatrices.txt');
 covMatrices(isnan(covMatrices))=0;
 letters = char(65:90);
@@ -117,28 +117,30 @@ smoothedBackground = GaussianSmoothing(backgroundIm, sigma);
 
 total = 0;
 correct = 0;
+%For each letter
 for i = 1:N
     currentDirectory = strcat('TestImages/', letters(i));
     imageFiles = dir(fullfile(currentDirectory, '*.jpg'));
     sz = length(imageFiles);
     
+    %For each test image
+    %Same Process as during Training
     for j = 1:sz
         filename = imageFiles(j).name;
         concat = strcat(currentDirectory, '/', filename);
         letterIm = imread(concat,'jpg');
         blurredIm = GaussianSmoothing(letterIm, sigma);
-        %figure();
-        %imshow(blurredIm);
         
         % Perform background subtraction
         region = BackgroundSubtraction(blurredIm, smoothedBackground, T);
         region = bwmorph(region, 'dilate');
         [L, num] = bwlabel(region, 8);
         region = bwareaopen(L, 150, 8);
-        %figure();
-        %imshow(region);
+        figure();
+        imshow(region);
         
         % Extract window using background subtracted image
+        %{
         [rows, columns] = find(region);
         windowLeft = min(columns);
         windowRight = max(columns);
@@ -155,7 +157,7 @@ for i = 1:N
         bottom = min(sz(1), windowBottom+rowThreshold);
         
         handRegion = blurredIm(top:bottom, left:right, :);
-        
+        %}
         %CALCULATION
         %Using features, calculate covariance matrix C model, add result
         %Overlay region to image, convert to grayscale
@@ -210,7 +212,7 @@ for i = 1:N
         end
         %find minimum distance
         closest = min(distances);
-        %index of that minimum distance is index of patch
+        %index of that minimum distance is letter classification
         result = find(distances==closest);
         fprintf('Actual: %c, Classified: %c\n', letters(i), letters(result));
         if letters(i) == letters(result)
@@ -224,70 +226,6 @@ end
 
 fprintf('Classification accuracy: %u/%u\n', correct, total);
 
-
-
-
-%% Reference
-% %FOLLOWING CODE IS PULLED FROM HW10 NCC TEMPLATE MATCHING
-% left = double(imread('left.png'));
-% right = double(imread('right.png'));
-% 
-% S = 256;
-% disparity = zeros([S,S]);
-% 
-% %I'm assuming the epipolar lines are already paralled
-% %they look that way from the images
-% %going straight to bottom bullet points on slide 26
-% window = 11;
-% radius = (window-1)/2;
-% 
-% %for each pixel in left
-% for c = 1+radius:S-radius
-%     for r = 1+radius:S-radius
-%         xl = left(r,c);
-%         lpatch = left(r-radius:r+radius,c-radius:c+radius);
-%         left_av = mean(mean(lpatch));
-%         left_std = std(lpatch,0,'all');
-%         
-%         search = min(50,c-(1+radius));
-%         best_ncc = 0;
-%         best_index = 0;
-%         for c2 = 0:search
-%             %only need to search to left of rc in right image
-%             xr = right(r,c-c2);
-%             rpatch = right(r-radius:r+radius,(c-c2)-radius:(c-c2)+radius);
-%             right_av = mean(mean(rpatch));
-%             right_std = std(rpatch,0,'all');
-%             
-%             %use ncc to find best pixel in right
-%             sum = 0;
-%             for x = 1:window
-%                 for y = 1:window
-%                     sum = sum + ((lpatch(x,y)-left_av)*(rpatch(x,y)-right_av)) / (left_std * right_std);
-%                 end
-%             end
-%             
-%             %record largest ncc value
-%             ncc = sum/(window*window-1);
-%             if ncc > best_ncc
-%                 best_ncc = ncc;
-%                 best_index = c2;
-%             end
-%             
-%         end
-%         
-%         match = c-best_index;
-%         disparity(r,c) = c-match;
-%     end
-% end
-% 
-% figure();
-% imagesc(disparity, [0 50]);  
-% axis equal; 
-% colormap gray; 
-% title 'disparity map';
-
-
 %% Functions
 
 % Performs basic background subtraction using a foreground image, a
@@ -300,32 +238,6 @@ function region = BackgroundSubtraction(foregroundIm, backgroundIm, T)
 
     region = abs(grayForeground - grayBackground) > T;
 
-end
-
-% Given a binary region, calculates the average X and Y coordinates
-% in the region.
-function [X, Y] = CalculateRegionCenter(region)
-
-    X = 0;
-    Y = 0;
-    count = 0;
-    
-    sz = size(region);
-    for x = 1:sz(2)
-        for y = 1:sz(1)
-            
-            if region(y,x) == 1
-                X = X + x;
-                Y = Y + y;
-                count = count + 1;
-            end
-            
-        end
-    end
-    
-    X = X / XCount;
-    Y = Y / YCount;
-    
 end
 
 % PULLED FROM HW2 CODE
